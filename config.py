@@ -4,4 +4,4 @@ random_seed = 36
 sample_size = 50
 voxel_dir = "./voxels_50"
 voxel_res = 64
-voxel_batch_size = 8
+voxel_batch_size = 1

@@ -18,7 +18,7 @@ class VoxelDataset(Dataset):
         assert voxel_data.shape == torch.Size([1, 64, 64, 64]), f"Unexpected shape: {voxel_data.shape}"
         return voxel_data
 def voxel_dataloader():
-    voxel_paths = [os.path.join(config.voxel_dir, path) for path in os.listdir(config.voxel_dir) if path.endswith(".pt")]
+    voxel_paths = [os.path.join(config.voxel_dir, path) for path in os.listdir(config.voxel_dir) if path.endswith(".pt")][:50]
     dataset = VoxelDataset(voxel_paths)
     train_size = int(0.8 * len(dataset))
     test_size = len(dataset) - train_size
