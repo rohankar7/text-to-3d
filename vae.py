@@ -8,33 +8,33 @@ class VAE(nn.Module): # 64³ voxel VAE using GroupNorm (no residual blocks)
     def __init__(self, latent_dim):
         super().__init__()
         self.encoder_conv = nn.Sequential(
-            nn.Conv3d(1, 32, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv3d(1, 32, kernel_size=4, stride=2, padding=1, bias=False), # 32 -> 16
             nn.GroupNorm(num_groups=8, num_channels=32),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.2),
-            nn.Conv3d(32, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv3d(32, 64, kernel_size=4, stride=2, padding=1, bias=False), # 16 -> 8
             nn.GroupNorm(num_groups=8, num_channels=64),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.2),
-            nn.Conv3d(64, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv3d(64, 128, kernel_size=4, stride=2, padding=1, bias=False), # 8 -> 4
             nn.GroupNorm(num_groups=8, num_channels=128),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.2),
-            nn.Conv3d(128, 256, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.GroupNorm(num_groups=8, num_channels=256),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.2),
-            nn.Conv3d(256, 512, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.GroupNorm(num_groups=8, num_channels=512),
-            nn.ReLU(inplace=True),
+            # nn.Dropout(p=0.2),
+            # nn.Conv3d(128, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            # nn.GroupNorm(num_groups=8, num_channels=256),
+            # nn.ReLU(inplace=True),
+            # nn.Dropout(p=0.2),
+            # nn.Conv3d(256, 512, kernel_size=4, stride=2, padding=1, bias=False),
+            # nn.GroupNorm(num_groups=8, num_channels=512),
+            # nn.ReLU(inplace=True),
             # nn.Conv3d(512, 1024, kernel_size=4, stride=2, padding=1, bias=False),
             # nn.GroupNorm(num_groups=8, num_channels=1024),
             # nn.ReLU(inplace=True),
         )
-        enc_out_dim = 4096
+        enc_out_dim = 128*4*4*4
         # enc_out_dim = 256*4*4*4
         self.flatten = nn.Flatten()
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(512, 2, 2, 2))
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(128, 4, 4, 4))
         self.fc_mu = nn.Linear(enc_out_dim, latent_dim)
         self.fc_logvar = nn.Linear(enc_out_dim, latent_dim)
         self.fc_z = nn.Linear(latent_dim, enc_out_dim)
@@ -42,14 +42,14 @@ class VAE(nn.Module): # 64³ voxel VAE using GroupNorm (no residual blocks)
             # nn.ConvTranspose3d(1024, 512, kernel_size=4, stride=2, padding=1),
             # nn.GroupNorm(num_groups=8, num_channels=512),
             # nn.ReLU(inplace=True),
-            nn.ConvTranspose3d(512, 256, kernel_size=4, stride=2, padding=1),
-            nn.GroupNorm(num_groups=8, num_channels=256),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.2),
-            nn.ConvTranspose3d(256, 128, kernel_size=4, stride=2, padding=1),
-            nn.GroupNorm(num_groups=8, num_channels=128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.2),
+            # nn.ConvTranspose3d(512, 256, kernel_size=4, stride=2, padding=1),
+            # nn.GroupNorm(num_groups=8, num_channels=256),
+            # nn.ReLU(inplace=True),
+            # nn.Dropout(p=0.2),
+            # nn.ConvTranspose3d(256, 128, kernel_size=4, stride=2, padding=1),
+            # nn.GroupNorm(num_groups=8, num_channels=128),
+            # nn.ReLU(inplace=True),
+            # nn.Dropout(p=0.2),
             nn.ConvTranspose3d(128, 64, kernel_size=4, stride=2, padding=1),
             nn.GroupNorm(num_groups=8, num_channels=64),
             nn.ReLU(inplace=True),
@@ -86,11 +86,13 @@ def total_variance_loss(x):
     tvl_w = torch.pow(x[:, :, :, :, 1:] - x[:, :, :, :, :-1], 2).sum()
     return (tvl_d + tvl_h + tvl_w) / (B * C * D * H * W)
 
+def get_annealed_beta(epoch, warmup_epochs, max_beta=1e-3):
+    if epoch < warmup_epochs: return max_beta * (epoch / warmup_epochs)
+    else: return max_beta
 
-def vae_loss(recon_x, x, mu, logvar):
+def vae_loss(recon_x, x, mu, logvar, beta_kld=1e-3):
     bce = F.binary_cross_entropy(recon_x, x, reduction="mean")
     kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
     tvl = total_variance_loss(recon_x)
-    beta_kld = 1e-3
     lambda_tvl = 1e-3
-    return bce + kld*beta_kld + tvl*lambda_tvl
+    return bce + kld*beta_kld + tvl*lambda_tvl, bce.item(), kld.item()

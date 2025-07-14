@@ -7,15 +7,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR
 from tqdm import tqdm
 import config
 from vae import *
-
-def analyze_voxel_sparsity(dataloader):
-    total_vox = 0
-    total_nonzero = 0
-    for vox in tqdm(dataloader, desc="Analyzing voxel sparsity"):
-        total_vox += vox.numel()
-        total_nonzero += (vox > 0).sum().item()
-    ratio = total_nonzero / total_vox
-    print(f"🔥 Overall Nonzero Voxel Ratio: {ratio:.6f}")
+import matplotlib.pyplot as plt
 
 def train_test_vae():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -24,26 +16,35 @@ def train_test_vae():
     optimizer = optim.Adam(vae.parameters(), lr=1e-3, betas=(0.9, 0.999), weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5, min_lr=1e-6)
     os.makedirs("./checkpoints/vae", exist_ok=True)
-    num_epochs = 100
-    early_stopping_patience = 10
+    num_epochs = 300
+    early_stopping_patience = 20
     early_stopping_counter = 0
     best_test_loss = float("inf")
+    train_bce_loss = []
+    train_kld_loss = []
     # Train VAE
-    analyze_voxel_sparsity(train_loader)
+    # analyze_voxel_sparsity(train_loader)
     for epoch in range(num_epochs):
         vae.train()
-        train_loss = 0
+        train_loss, total_bce, total_kld = 0, 0, 0
         for voxel_gt in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             x = voxel_gt.to(device)
             recon_x, mu, logvar = vae(x)
-            loss = vae_loss(recon_x, x, mu, logvar)
+            loss, bce, kld = vae_loss(recon_x, x, mu, logvar, beta_kld=1e-3)
             # Backprop
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
+            total_bce += bce
+            total_kld += kld
+            print("KLD", kld)
         avg_train_loss = train_loss / len(train_loader)
-        print(f"🔥 Epoch {epoch+1}: Avg Train Loss = {avg_train_loss:.6f}")
+        avg_bce = total_bce / len(train_loader)
+        avg_kld = total_kld / len(train_loader)
+        train_bce_loss.append(avg_bce)
+        train_kld_loss.append(avg_kld)
+        print(f"🔥 Epoch {epoch+1}: Avg Train Loss = {avg_train_loss:.6f} | Recon: {avg_bce:.6f} | KLD: {avg_kld:.6f}")
         # Test VAE
         vae.eval()
         test_loss = 0
@@ -51,7 +52,7 @@ def train_test_vae():
             for voxel_gt in tqdm(test_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
                 x = voxel_gt.to(device)
                 recon_x, mu, logvar = vae(x)
-                loss = vae_loss(recon_x, x, mu, logvar)
+                loss, _, _ = vae_loss(recon_x, x, mu, logvar, beta_kld=1e-3)
                 test_loss += loss.item()
             avg_test_loss = test_loss / len(test_loader)
             scheduler.step(avg_test_loss)
@@ -72,6 +73,19 @@ def train_test_vae():
                     print("Early stopping triggered")
                     break
         # torch.cuda.empty_cache()
+    plot_recon_vs_kld(num_epochs, train_bce_loss, train_kld_loss)
+
+def plot_recon_vs_kld(epochs, train_bce_loss, train_kld_loss):
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, train_bce_loss, label='Reconstruction Loss (BCE)', color='blue', linewidth=2)
+    plt.plot(epochs, train_kld_loss, label='KL Divergence', color='red', linewidth=2)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Reconstruction Loss vs KL Divergence over Epochs')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 def main():
     train_test_vae()
