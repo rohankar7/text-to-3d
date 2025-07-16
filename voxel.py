@@ -10,7 +10,7 @@ from viz import viz_voxel, viz_mesh
 
 def save_voxels():
     os.makedirs(voxel_dir, exist_ok=True)
-    for path in tqdm(sorted(get_random_models()), desc=f"Progress"):
+    for path in tqdm(sorted(get_random_models())[:50], desc=f"Progress"):
         if f"{"_".join(path.split("/"))}.pt" not in os.listdir(voxel_dir): create_voxels(path)
 
 def analyze_voxel_sparsity(dataloader):
