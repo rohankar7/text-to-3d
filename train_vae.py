@@ -17,7 +17,7 @@ def train_test_vae():
     vae = VAETest(latent_channels = vae_latent_channels).to(device)
     optimizer = optim.Adam(vae.parameters(), lr=vae_optim_lr, betas=(0.9, 0.999), weight_decay=0)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5, min_lr=1e-6)
-    os.makedirs("./checkpoints/vae", exist_ok=True)
+    os.makedirs(f"{vae_checkpoint_dir}", exist_ok=True)
     num_epochs = vae_num_epochs
     early_stopping_patience = vae_stopping_patience
     early_stopping_counter = 0
@@ -65,7 +65,7 @@ def train_test_vae():
                     "vae": vae.state_dict(),
                     "optimizer": optimizer.state_dict(),
                     "test_loss": best_test_loss
-                }, f"./checkpoints/vae/best_model.pth")
+                }, f"{vae_checkpoint_dir}/best_model_128.pth")
                 print(f"Saved best model at {epoch+1}")
                 early_stopping_counter = 0
             else:

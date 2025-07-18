@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-import config
+from config import *
 
 
 class VAE(nn.Module): # 64³ voxel VAE using GroupNorm (no residual blocks)
@@ -58,23 +58,23 @@ class VAE(nn.Module): # 64³ voxel VAE using GroupNorm (no residual blocks)
         return recon_x, mu, logvar
 
 class VAETest(nn.Module):
-    def __init__(self, latent_channels=128):
+    def __init__(self, latent_channels=vae_latent_channels):
         super().__init__()
         # Encoder
         self.encoder_conv = nn.Sequential(
-            nn.Conv3d(1, 32, 4, 2, 1, bias=False),
-            nn.GroupNorm(config.voxel_batch_size, 32), nn.ReLU(inplace=True), nn.Dropout(0.2),
-            nn.Conv3d(32, latent_channels, 4, 2, 1, bias=False),
-            nn.GroupNorm(config.voxel_batch_size, latent_channels), nn.ReLU(inplace=True), nn.Dropout(0.2),
+            nn.Conv3d(1, vae_hidden_dim, 4, 2, 1, bias=False),
+            nn.GroupNorm(vae_batch_size, vae_hidden_dim), nn.ReLU(inplace=True), nn.Dropout(0.2),
+            nn.Conv3d(vae_hidden_dim, latent_channels, 4, 2, 1, bias=False),
+            nn.GroupNorm(vae_batch_size, latent_channels), nn.ReLU(inplace=True), nn.Dropout(0.2),
         )
         # 1×1×1 convs give channel‑wise μ and log σ², shape = (B, latent_channels, 4, 4, 4)
         self.conv_mu = nn.Conv3d(latent_channels, latent_channels, kernel_size=1, stride=1, padding=0)
         self.conv_logvar = nn.Conv3d(latent_channels, latent_channels, kernel_size=1, stride=1, padding=0)
         # Decoder
         self.decoder_conv = nn.Sequential(
-            nn.ConvTranspose3d(latent_channels, 32, 4, 2, 1),
-            nn.GroupNorm(config.voxel_batch_size, 32), nn.ReLU(inplace=True), nn.Dropout(0.2),
-            nn.ConvTranspose3d(32, 1, 4, 2, 1),
+            nn.ConvTranspose3d(latent_channels, vae_hidden_dim, 4, 2, 1),
+            nn.GroupNorm(vae_batch_size, vae_hidden_dim), nn.ReLU(inplace=True), nn.Dropout(0.2),
+            nn.ConvTranspose3d(vae_hidden_dim, 1, 4, 2, 1),
             nn.Sigmoid()
         )
     
@@ -109,6 +109,6 @@ def vae_loss(recon_x, x, mu, logvar, beta_kld):
     # bce = F.binary_cross_entropy(recon_x, x, reduction="sum") / x.size(0) 
     # kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp() , dim=[1, 2, 3, 4]).mean() # shape: (B, C, 4, 4, 4)
     tvl = total_variance_loss(recon_x)
-    lambda_tvl = 1e-2
+    lambda_tvl = vae_lambda_tvl
     # lambda_tvl = 0
     return bce + kld*beta_kld + tvl*lambda_tvl, bce.item(), kld.item()
