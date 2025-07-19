@@ -1,15 +1,15 @@
 """unet3d_diffusion.py
 ====================
-A DiT‑style 3‑D UNet for latent‑diffusion on voxel latents **(128 × 8 × 8 × 8)**
+A DiT‑style 3‑D UNet for latent‑diffusion on voxel latents (256 x 32 x 32 x 32)
 with optional CLIP text cross‑attention.
 
 Author: OpenAI ChatGPT  •  July 2025
 
 Highlights
 ----------
-• Sinusoidal timestep embeddings (1 024‑dim)
-• GroupNorm everywhere (batch‑size agnostic)
-• Down / Mid / Up blocks each with self + cross‑attention
+• Sinusoidal timestep embeddings (1024-dim)
+• GroupNorm everywhere (batch-size agnostic)
+• Down / Mid / Up blocks each with self + cross-attention
 • Residual path keeps channels constant; channel doubling when downsampling
 • Built to drop into a Lightning or vanilla PyTorch training loop.
 
@@ -49,32 +49,6 @@ def get_timestep_embedding(timesteps: torch.Tensor, dim: int = 1024) -> torch.Te
     if dim % 2:  # zero‑pad if dim odd
         emb = F.pad(emb, (0, 1))
     return emb  # shape (B, dim)
-
-
-class ConvGNAct(nn.Module):
-    def __init__(self, in_ch: int, out_ch: int, k: int = 3, s: int = 1, p: int = 1):
-        super().__init__()
-        self.conv = nn.Conv3d(in_ch, out_ch, k, s, p, bias=False)
-        self.norm = nn.GroupNorm(8, out_ch)
-        self.act = nn.SiLU(inplace=True)
-
-    def forward(self, x: torch.Tensor):
-        return self.act(self.norm(self.conv(x)))
-
-
-class ResBlock3D(nn.Module):
-    def __init__(self, ch: int, emb_dim: int):
-        super().__init__()
-        self.block1 = ConvGNAct(ch, ch)
-        self.block2 = ConvGNAct(ch, ch)
-        self.emb_proj = nn.Linear(emb_dim, ch)
-
-    def forward(self, x: torch.Tensor, emb: torch.Tensor):
-        h = self.block1(x)
-        h = h + self.emb_proj(emb).view(emb.size(0), -1, 1, 1, 1)
-        h = self.block2(h)
-        return x + h  # residual
-
 
 class SelfCrossAttn(nn.Module):
     def __init__(self, ch: int, heads: int = 4, text_dim: int = 768, cross: bool = True):
@@ -118,6 +92,28 @@ class SelfCrossAttn(nn.Module):
         out = out.view(b, c, d, h, w)
         return out + x  # residual
 
+class ConvGNAct(nn.Module):
+    def __init__(self, in_ch, out_ch, k = 3, s = 1, p = 1):
+        super().__init__()
+        self.conv = nn.Conv3d(in_ch, out_ch, k, s, p, bias=False)
+        self.norm = nn.GroupNorm(8, out_ch)
+        self.act = nn.SiLU(inplace=True)
+
+    def forward(self, x: torch.Tensor):
+        return self.act(self.norm(self.conv(x)))
+
+class ResBlock3D(nn.Module):
+    def __init__(self, ch: int, emb_dim: int):
+        super().__init__()
+        self.block1 = ConvGNAct(ch, ch)
+        self.block2 = ConvGNAct(ch, ch)
+        self.emb_proj = nn.Linear(emb_dim, ch)
+
+    def forward(self, x: torch.Tensor, emb: torch.Tensor):
+        h = self.block1(x)
+        h = h + self.emb_proj(emb).view(emb.size(0), -1, 1, 1, 1)
+        h = self.block2(h)
+        return x + h  # residual
 
 class DownBlock(nn.Module):
     def __init__(self, in_ch: int, out_ch: int, emb_dim: int, text_dim: int, cross: bool):

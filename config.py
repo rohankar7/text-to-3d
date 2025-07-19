@@ -20,3 +20,5 @@ vae_checkpoint_dir = "./checkpoints/vae"
 # 🧪 Test Loss = 0.000594
 # Saved best model at 455
 
+# Latent Res = (B, 256, 32, 32, 32)
+embedding_dir = "./embeddings"
