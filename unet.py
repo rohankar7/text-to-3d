@@ -1,9 +1,7 @@
-"""unet3d_diffusion.py
+"""Unet
 ====================
 A DiT‑style 3‑D UNet for latent‑diffusion on voxel latents (256 x 32 x 32 x 32)
 with optional CLIP text cross‑attention.
-
-Author: OpenAI ChatGPT  •  July 2025
 
 Highlights
 ----------
