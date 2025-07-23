@@ -9,7 +9,6 @@ def save_latent_representation():
     device = 'cpu'
     vae  = VAETest().to(device)
     vae_weights_dir = f"{vae_checkpoint_dir}/best_model.pth"
-    # vae_weights_dir = f'{config.vae_weights_dir}/{weights_dir}_aeroplanes_1.pth'
     checkpoint = torch.load(vae_weights_dir)
     vae.load_state_dict(checkpoint['model_state_dict'])
     vae.eval()

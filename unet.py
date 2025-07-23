@@ -1,7 +1,7 @@
 """Unet
 ====================
-A DiT‑style 3‑D UNet for latent‑diffusion on voxel latents (256 x 32 x 32 x 32)
-with optional CLIP text cross‑attention.
+A DiT-style 3D UNet for latent-diffusion on voxel latents (256 x 32 x 32 x 32)
+with optional CLIP text cross-attention.
 
 Highlights
 ----------
@@ -126,7 +126,6 @@ class DownBlock(nn.Module):
         x_down = self.down(x)
         return x_down, x  # return skip
 
-
 class UpBlock(nn.Module):
     def __init__(self, in_ch: int, skip_ch: int, out_ch: int, emb_dim: int, text_dim: int, cross: bool):
         super().__init__()
@@ -140,12 +139,9 @@ class UpBlock(nn.Module):
         x = self.res1(x, emb)
         x = self.attn1(x, text)
         return x
-
-
 # ------------------------------------------------------------
 #  UNet‑3D main module
 # ------------------------------------------------------------
-
 class UNet3D(nn.Module):
     def __init__(
         self,
@@ -182,7 +178,6 @@ class UNet3D(nn.Module):
         self.out_norm = nn.GroupNorm(8, base_ch)
         self.out_conv = nn.Conv3d(base_ch, latent_ch, 3, 1, 1)
 
-    # --------------------------------------------------
     def forward(
         self,
         x: torch.Tensor,  # (B, latent_ch, 8, 8, 8)
