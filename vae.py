@@ -87,7 +87,7 @@ class VAETest(nn.Module):
     def forward(self, x):
         h = self.encoder_conv(x) # (B, 128, 4, 4, 4)
         mu, logvar = self.conv_mu(h), self.conv_logvar(h)
-        z = self.reparameterize(mu, logvar) # still (B, 128, 4, 4, 4)
+        z = self.reparameterize(mu, logvar) # Latent (B, 128, 4, 4, 4)
         recon = self.decoder_conv(z)
         return recon, mu, logvar
 

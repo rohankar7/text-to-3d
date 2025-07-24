@@ -26,8 +26,7 @@ def save_embeddings():
                 embedding = model.encode_text(tokens)           # (1, 768)
                 per_token = model.token_embedding(tokens)      # (1, 77, 768)
                 embedding /= embedding.norm(dim=-1, keepdim=True)
-            # print("Embedding :", embedding.shape)        # (1, 768)
-            # print("Per-token :", per_token.shape)        # (1, 77, 768)
+            # print("Embedding :", embedding.shape, "Per-token :", per_token.shape)        # (1, 768), (1, 77, 768)
             torch.save(embedding, f"{embedding_dir}/{c}_{s}.pt") # Normalizing the embedding
 
 def main():
