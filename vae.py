@@ -111,4 +111,4 @@ def vae_loss(recon_x, x, mu, logvar, beta_kld):
     tvl = total_variance_loss(recon_x)
     lambda_tvl = vae_lambda_tvl
     # lambda_tvl = 0
-    return bce + kld*beta_kld + tvl*lambda_tvl, bce.item(), kld.item()
+    return bce + kld*beta_kld + tvl*lambda_tvl, bce, kld

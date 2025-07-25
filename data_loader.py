@@ -23,6 +23,6 @@ def voxel_dataloader():
     train_size = int(0.8 * len(dataset))
     test_size = len(dataset) - train_size
     train_set, test_set = random_split(dataset, [train_size, test_size])
-    train_loader = DataLoader(train_set, batch_size=config.voxel_batch_size, shuffle=True)
-    test_loader = DataLoader(test_set, batch_size=config.voxel_batch_size, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=config.vae_batch_size, shuffle=True)
+    test_loader = DataLoader(test_set, batch_size=config.vae_batch_size, shuffle=False)
     return train_loader, test_loader

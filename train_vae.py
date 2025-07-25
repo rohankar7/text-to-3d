@@ -38,8 +38,8 @@ def train_test_vae():
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
-            total_bce += bce
-            total_kld += kld
+            total_bce += bce.item()
+            total_kld += kld.item()
         avg_train_loss = train_loss / len(train_loader)
         avg_bce = total_bce / len(train_loader)
         avg_kld = total_kld / len(train_loader)
@@ -65,7 +65,7 @@ def train_test_vae():
                     "vae": vae.state_dict(),
                     "optimizer": optimizer.state_dict(),
                     "test_loss": best_test_loss
-                }, f"{vae_checkpoint_dir}/best_model_128.pth")
+                }, f"{vae_checkpoint_dir}/best_model_128_1.pth")
                 print(f"Saved best model at {epoch+1}")
                 early_stopping_counter = 0
             else:
